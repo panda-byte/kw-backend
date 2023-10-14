@@ -9,7 +9,8 @@ from django.utils import timezone
 from api.sync.SyncerFactory import Syncer
 from api.sync.WanikaniUserSyncerV2 import WanikaniUserSyncerV2
 from kw_webapp import constants
-from kw_webapp.models import Vocabulary, UserSpecific
+from kw_webapp.constants import MeaningType
+from kw_webapp.models import Vocabulary, UserSpecific, MeaningMapping
 from kw_webapp.srs import all_srs
 from kw_webapp.tasks import (
     past_time,
@@ -46,7 +47,7 @@ class TestSync(TestCase):
 
     def prepLocalVocabulary(self):
         self.v = Vocabulary.objects.create()
-        self.v.meaning = "radioactive bat"
+        self.v.meanings = [MeaningMapping(meaning="radioactive bat", type=MeaningType.PRIMARY)]
         self.v.wk_subject_id = 1
         self.v.save()
         return self.v

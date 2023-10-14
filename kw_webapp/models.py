@@ -18,6 +18,7 @@ from kw_webapp.constants import (
     WANIKANI_SRS_LEVELS,
     KwSrsLevel,
     KANIWANI_SRS_LEVELS,
+    MeaningType,
 )
 
 logger = logging.getLogger(__name__)
@@ -225,14 +226,16 @@ class PartOfSpeech(models.Model):
         return str(self.part)
 
 
+class Meaning(models.Model):
+    meaning = models.CharField(max_length=255, unique=True)
+
+
 class Vocabulary(models.Model):
-    meaning = models.CharField(max_length=255)
     wk_subject_id = models.IntegerField(
         default=0
     )
     wk_last_modified = models.DateTimeField(null=True)
     parts_of_speech = models.ManyToManyField(PartOfSpeech)
-    auxiliary_meanings_whitelist = models.CharField(max_length=500, null=True)
     level = models.PositiveIntegerField(
         null=True,
         validators=[
@@ -241,6 +244,28 @@ class Vocabulary(models.Model):
         ],
     )
     manual_reading_whitelist = models.CharField(max_length=500, null=True)
+
+    @property
+    def meaning(self):
+        return ", ".join([self.primary_meaning] + list(self.secondary_meanings))
+
+    @property
+    def primary_meaning(self):
+        return self.meanings.get(type=MeaningType.PRIMARY.name).meaning.meaning
+
+    @property
+    def secondary_meanings(self):
+        return self.meanings.filter(type=MeaningType.SECONDARY.name).values_list('meaning__meaning', flat=True)
+
+    @property
+    def whitelist_meanings(self):
+        return self.meanings.filter(type=MeaningType.WHITELIST.name).values_list('meaning__meaning', flat=True)
+
+    @property
+    def synonyms(self):
+        return Vocabulary.objects.filter(
+            meanings__meaning_id__in=self.meanings.values('meaning_id')
+        ).exclude(id=self.id).distinct()
 
     def add_manual_whitelisted_word(self, word):
         self.readings.add()
@@ -268,15 +293,32 @@ class Vocabulary(models.Model):
         self.level = vocabulary.level
         # Set whatever is the new primary meaning.
 
-        # TODO EVENTUALLY REWORK TO SUPPORT ALTERNATE MEANINGS. For now, just smash em all into one.
-        self.meaning = ", ".join([m_obj.meaning for m_obj in vocabulary.meanings])
-        self.auxiliary_meanings_whitelist = ",".join(
-            [
-                aux.meaning
-                for aux in vocabulary.auxiliary_meanings
-                if aux.type == "whitelist"
-            ]
-        )
+        self.meanings.all().delete()
+
+        for remote_meaning in vocabulary.meanings:
+            local_meaning, _ = Meaning.objects.get_or_create(meaning=remote_meaning.meaning)
+
+            self.meanings.add(
+                MeaningMapping(
+                    meaning=local_meaning,
+                    type=MeaningType.PRIMARY.name if remote_meaning.primary else MeaningType.SECONDARY.name
+                ),
+                bulk=False
+            )
+
+        for aux_meaning in vocabulary.auxiliary_meanings:
+            if aux_meaning.type != "whitelist":
+                continue
+
+            local_meaning, _ = Meaning.objects.get_or_create(meaning=aux_meaning.meaning)
+
+            self.meanings.add(
+                MeaningMapping(
+                    meaning=local_meaning,
+                    type=MeaningType.WHITELIST.name
+                ),
+                bulk=False
+            )
 
         # Reconcile the difference in readings.
         self._delete_stale_readings_based_on(vocabulary)
@@ -319,7 +361,32 @@ class Vocabulary(models.Model):
         self.readings.add(*readings_to_add, bulk=False)
 
     def __str__(self):
-        return self.meaning
+        representation = self.meaning
+
+        if self.readings:
+            representation += f" ({self.readings.first().character})"
+
+        return representation
+
+
+class MeaningMapping(models.Model):
+    meaning = models.ForeignKey(Meaning, related_name="vocabulary", on_delete=models.CASCADE)
+    vocabulary = models.ForeignKey(Vocabulary, related_name="meanings", on_delete=models.CASCADE)
+    type = models.CharField(max_length=20, choices=MeaningType.choices())
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['meaning', 'vocabulary'],
+                condition=models.Q(type=MeaningType.PRIMARY),
+                name='only_one_type_for_mapping'
+            ),
+            models.UniqueConstraint(
+                fields=['vocabulary', 'type'],
+                condition=models.Q(type=MeaningType.PRIMARY),
+                name='unique_primary_meaning'
+            )
+        ]
 
 
 class Tag(models.Model):
