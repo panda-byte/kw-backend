@@ -416,7 +416,6 @@ class VocabularySerializer(serializers.ModelSerializer):
             "id",
             "primary_meaning",
             "secondary_meanings",
-            "whitelist_meanings",
             "readings",
             "review",
             "is_reviewable",
