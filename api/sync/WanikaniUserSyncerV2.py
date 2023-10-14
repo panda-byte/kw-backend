@@ -1,13 +1,13 @@
 import logging
 
 from django.contrib.auth.models import User
+from django.db.models import Count
 from django.utils import timezone
 from wanikani_api.client import Client as WkV2Client
 from wanikani_api.exceptions import InvalidWanikaniApiKeyException
 
 from api.sync.WanikaniUserSyncer import WanikaniUserSyncer
-from kw_webapp.models import Vocabulary, UserSpecific
-
+from kw_webapp.models import Vocabulary, UserSpecific, Meaning
 
 logger = logging.getLogger(__name__)
 
@@ -312,6 +312,16 @@ class WanikaniUserSyncerV2(WanikaniUserSyncer):
             logger.info(
                 f"Managed to update {updated_vocabulary_count} vocabulary from V2 API."
             )
+
+            orphaned_meanings = Meaning.objects.exclude(vocabulary__isnull=False)
+
+            if orphaned_meanings:
+                for meaning in orphaned_meanings:
+                    logger.info(f"Delete orphaned meaning '{meaning.meaning}' ({meaning.id}).")
+
+                logger.info(f"Deleted {len(orphaned_meanings)} orphaned meaning(s).")
+                orphaned_meanings.delete()
+
             return updated_vocabulary_count
         except InvalidWanikaniApiKeyException:
             logger.error(
