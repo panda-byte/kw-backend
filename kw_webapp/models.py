@@ -258,7 +258,7 @@ class Vocabulary(models.Model):
         return self.meanings.filter(type=MeaningType.SECONDARY.name).values_list('meaning__meaning', flat=True)
 
     @property
-    def whitelist_meanings(self):
+    def auxiliary_meanings_whitelist(self):
         return self.meanings.filter(type=MeaningType.WHITELIST.name).values_list('meaning__meaning', flat=True)
 
     @property

@@ -284,11 +284,11 @@ class TestSync(TestCase):
     def test_vocabulary_auxiliary_meanings_changes_carry_over(self):
         mock_subjects_v2()
         syncer = WanikaniUserSyncerV2(self.user.profile)
-        assert self.v.auxiliary_meanings_whitelist is None
+        assert len(self.v.auxiliary_meanings_whitelist) == 0
         updated_vocabulary_count = syncer.sync_top_level_vocabulary()
         assert updated_vocabulary_count == 1
         self.v.refresh_from_db()
-        assert self.v.auxiliary_meanings_whitelist == "1,uno"
+        assert ",".join(self.v.auxiliary_meanings_whitelist) == "1,uno"
 
     @responses.activate
     def test_vocabulary_reading_changes_carry_over(self):
