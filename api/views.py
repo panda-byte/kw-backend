@@ -319,6 +319,8 @@ class ReviewViewSet(ListRetrieveUpdateViewSet):
                 "reading_synonyms",
                 "vocabulary__readings",
                 "vocabulary__readings__parts_of_speech",
+                "vocabulary__meanings",
+                "vocabulary__meanings__meaning",
             )
         )
         page = self.paginate_queryset(lessons)
@@ -340,6 +342,8 @@ class ReviewViewSet(ListRetrieveUpdateViewSet):
                 "reading_synonyms",
                 "vocabulary__readings",
                 "vocabulary__readings__parts_of_speech",
+                "vocabulary__meanings",
+                "vocabulary__meanings__meaning",
             )
         )
         logger.debug(
