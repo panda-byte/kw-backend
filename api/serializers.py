@@ -398,6 +398,20 @@ class ReadingSerializer(serializers.ModelSerializer):
         )
 
 
+class SynonymReadingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reading
+        fields = ("id", "character", "kana")
+
+
+class SynonymSerializer(serializers.ModelSerializer):
+    readings = SynonymReadingSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Vocabulary
+        fields = ("id", "readings")
+
+
 class VocabularySerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super(VocabularySerializer, self).__init__(*args, **kwargs)
@@ -409,6 +423,7 @@ class VocabularySerializer(serializers.ModelSerializer):
     readings = ReadingSerializer(many=True, read_only=True)
     review = serializers.SerializerMethodField()
     is_reviewable = serializers.SerializerMethodField()
+    synonyms = SynonymSerializer(many=True, read_only=True)
 
     class Meta:
         model = Vocabulary
@@ -419,7 +434,8 @@ class VocabularySerializer(serializers.ModelSerializer):
             "readings",
             "review",
             "is_reviewable",
-            "manual_reading_whitelist"
+            "manual_reading_whitelist",
+            "synonyms"
         )
 
     # Grab the ID of the related review for this particular user.
