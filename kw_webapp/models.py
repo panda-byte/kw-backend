@@ -9,6 +9,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import User
 from django.db.models import F
 from django.utils import timezone
+from django.utils.functional import cached_property
 
 from kw_webapp import constants
 from kw_webapp.constants import (
@@ -245,27 +246,51 @@ class Vocabulary(models.Model):
     )
     manual_reading_whitelist = models.CharField(max_length=500, null=True)
 
-    @property
+    @cached_property
+    def cached_meaning_mappings(self):
+        return list(self.meanings.all())
+
+    @cached_property
     def meaning(self):
-        return ", ".join([self.primary_meaning] + list(self.secondary_meanings))
+        return ", ".join(
+            [self.primary_meaning] + list(self.secondary_meanings)
+        )
 
-    @property
+    @cached_property
     def primary_meaning(self):
-        return self.meanings.get(type=MeaningType.PRIMARY.name).meaning.meaning
+        return next(
+            mapping
+            for mapping in self.cached_meaning_mappings
+            if mapping.type == MeaningType.PRIMARY.name
+        ).meaning.meaning
 
-    @property
+    @cached_property
     def secondary_meanings(self):
-        return self.meanings.filter(type=MeaningType.SECONDARY.name).values_list('meaning__meaning', flat=True)
+        return [
+            mapping.meaning.meaning
+            for mapping in self.cached_meaning_mappings
+            if mapping.type == MeaningType.SECONDARY.name
+        ]
 
-    @property
+    @cached_property
     def auxiliary_meanings_whitelist(self):
-        return self.meanings.filter(type=MeaningType.WHITELIST.name).values_list('meaning__meaning', flat=True)
+        return [
+            mapping.meaning.meaning
+            for mapping in self.cached_meaning_mappings
+            if mapping.type == MeaningType.AUXILIARY.name
+        ]
 
-    @property
+    _prefetched_synonyms = None
+
+    @cached_property
     def synonyms(self):
+        if self._prefetched_synonyms is not None:
+            return self._prefetched_synonyms
+
         return Vocabulary.objects.filter(
-            meanings__meaning_id__in=self.meanings.values('meaning_id')
-        ).exclude(id=self.id).distinct()
+            meanings__meaning_id__in=[
+                mapping.meaning_id for mapping in self.cached_meaning_mappings
+        ]).exclude(id=self.id).distinct()
 
     def add_manual_whitelisted_word(self, word):
         self.readings.add()
