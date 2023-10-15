@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             name='MeaningMapping',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('type', models.CharField(choices=[('PRIMARY', 'Primary'), ('SECONDARY', 'Secondary'), ('WHITELIST', 'Whitelist')], max_length=20)),
+                ('type', models.CharField(choices=[('PRIMARY', 'Primary'), ('SECONDARY', 'Secondary'), ('AUXILIARY', 'Auxiliary')], max_length=20)),
                 ('meaning', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='vocabulary', to='kw_webapp.Meaning')),
                 ('vocabulary', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='meanings', to='kw_webapp.Vocabulary')),
             ],

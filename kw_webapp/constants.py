@@ -48,7 +48,7 @@ class WkSrsLevel(Enum):
 class MeaningType(Enum):
     PRIMARY = "Primary"
     SECONDARY = "Secondary"
-    WHITELIST = "Whitelist"
+    AUXILIARY = "Auxiliary"
 
     @classmethod
     def choices(cls):

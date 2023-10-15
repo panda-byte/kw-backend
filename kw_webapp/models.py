@@ -315,7 +315,7 @@ class Vocabulary(models.Model):
             self.meanings.add(
                 MeaningMapping(
                     meaning=local_meaning,
-                    type=MeaningType.WHITELIST.name
+                    type=MeaningType.AUXILIARY.name
                 ),
                 bulk=False
             )
